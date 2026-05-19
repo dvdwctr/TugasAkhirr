@@ -215,44 +215,63 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Pilih file gambar untuk dianalisis...", type=["jpg", "png", "jpeg"])
+uploaded_file = st.file_uploader(
+    "Pilih file gambar untuk dianalisis...",
+    type=["jpg", "jpeg", "png"]
+)
 
-if uploaded_file and model:
-    image = Image.open(uploaded_file)
-    
-    with st.spinner("Mengekstrak fitur citra..."):
-        raw_output = predict_image(image, model)
-        
-    col1, col2 = st.columns(2)
+if uploaded_file is not None:
+    st.info("File berhasil dipilih. Sedang memeriksa gambar...")
 
-    with col1:
-        st.markdown("### *Citra yang Diuji*")
-        st.image(image, use_column_width=True)
-        
-    with col2:
-        st.markdown('<div class="analysis-title">Hasil Analisis Klasifikasi</div>', unsafe_allow_html=True)
-        
-        try:
-            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            txt_path = os.path.join(BASE_DIR, 'final_threshold.txt')
-            with open(txt_path, "r") as f:
-                threshold = float(f.read().strip())
-        except Exception:
-            threshold = 0.50
-            
-        if raw_output >= threshold:
-            st.success("### *HASIL: TERDETEKSI SEBAGAI CITRA ASLI (REAL)*")
-            confidence_score = raw_output * 100
-            probabilitas_asli = raw_output
-            probabilitas_ai = 1.0 - raw_output
-        else:
-            st.error("### *HASIL: TERDETEKSI SEBAGAI CITRA BUATAN AI*")
-            confidence_score = (1.0 - raw_output) * 100
-            probabilitas_ai = 1.0 - raw_output
-            probabilitas_asli = raw_output
-            
-        st.markdown(f"**Tingkat Keyakinan (*Confidence Score*): {confidence_score:.2f}%**")
-        st.caption(f"Data Debug Mentah (Sigmoid): {raw_output:.6f} | Threshold: {threshold:.4f}")
+    try:
+        st.write("Nama file:", uploaded_file.name)
+        st.write("Ukuran file:", round(uploaded_file.size / 1024 / 1024, 2), "MB")
+        st.write("Tipe file:", uploaded_file.type)
+
+        if uploaded_file.size > 10 * 1024 * 1024:
+            st.error("Ukuran gambar terlalu besar. Maksimal 10 MB.")
+            st.stop()
+
+        image = Image.open(uploaded_file).convert("RGB")
+        st.success("Gambar valid. Memulai klasifikasi...")
+
+        if model is None:
+            st.error("Model gagal dimuat. Cek file model di repository.")
+            st.stop()
+
+        with st.spinner("Sedang memproses gambar, mohon tunggu..."):
+            raw_output = predict_image(image, model)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### *Citra yang Diuji*")
+            st.image(image, use_column_width=True)
+
+        with col2:
+            st.markdown('<div class="analysis-title">Hasil Analisis Klasifikasi</div>', unsafe_allow_html=True)
+
+            try:
+                BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+                txt_path = os.path.join(BASE_DIR, 'final_threshold.txt')
+                with open(txt_path, "r") as f:
+                    threshold = float(f.read().strip())
+            except Exception:
+                threshold = 0.50
+
+            if raw_output >= threshold:
+                st.success("### *HASIL: TERDETEKSI SEBAGAI CITRA ASLI (REAL)*")
+                confidence_score = raw_output * 100
+            else:
+                st.error("### *HASIL: TERDETEKSI SEBAGAI CITRA BUATAN AI*")
+                confidence_score = (1.0 - raw_output) * 100
+
+            st.markdown(f"**Tingkat Keyakinan (*Confidence Score*): {confidence_score:.2f}%**")
+            st.caption(f"Data Debug Mentah (Sigmoid): {raw_output:.6f} | Threshold: {threshold:.4f}")
+
+    except Exception as e:
+        st.error("Terjadi error saat memproses gambar.")
+        st.exception(e)
 
 else:
     st.info("Silakan unggah gambar untuk memulai analisis.")
