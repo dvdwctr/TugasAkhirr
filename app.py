@@ -227,7 +227,7 @@ if uploaded_file and model:
 
     with col1:
         st.markdown("### *Citra yang Diuji*")
-        st.image(image, use_container_width=True)
+        st.image(image, use_column_width=True)
         
     with col2:
         st.markdown('<div class="analysis-title">Hasil Analisis Klasifikasi</div>', unsafe_allow_html=True)
